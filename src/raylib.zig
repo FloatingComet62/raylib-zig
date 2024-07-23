@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const rl = @import("raylib");
+pub const rlc = @import("raylib");
 
 pub const Deiniter = struct {
     const Self = @This();
@@ -11,47 +11,22 @@ pub const Deiniter = struct {
     }
 };
 
-pub fn malloc(comptime T: type) type {
-    return struct {
-        const Self = @This();
-        item: std.ArrayList(T),
-        pub fn init(allocator: std.mem.Allocator, item: T) !Self {
-            var self = Self{ .item = try std.ArrayList(T).initCapacity(allocator, 1) };
-            try self.item.append(item);
-            return self;
-        }
-        pub fn deinit(ptr: *anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ptr));
-            self.item.deinit();
-        }
-        pub fn deiniter(self: *Self) Deiniter {
-            return .{ .ptr = self, .deinitFn = deinit };
-        }
-        pub fn get(self: Self) T {
-            return self.item.items[0];
-        }
-        pub fn get_ptr(self: Self) *T {
-            return &self.item.items[0];
-        }
-    };
-}
-
 pub fn drawText(
     str: [*c]const u8,
     pos_x: usize,
     pos_y: usize,
     font_size: c_int,
-    color: rl.Color,
+    color: rlc.Color,
 ) void {
-    const dim = rl.measureTextEx(
-        rl.getFontDefault(),
+    const dim = rlc.measureTextEx(
+        rlc.getFontDefault(),
         str,
         @floatFromInt(font_size),
         1,
     );
     const shift_x = @as(usize, @intFromFloat(dim.x / 2));
     const shift_y = @as(usize, @intFromFloat(dim.y / 2));
-    rl.drawText(str, @intCast(pos_x - shift_x), @intCast(pos_y - shift_y), font_size, color);
+    rlc.drawText(str, @intCast(pos_x - shift_x), @intCast(pos_y - shift_y), font_size, color);
 }
 
 pub fn drawRectangle(
@@ -59,9 +34,9 @@ pub fn drawRectangle(
     pos_y: c_int,
     width: c_int,
     height: c_int,
-    color: rl.Color,
+    color: rlc.Color,
 ) void {
-    rl.drawRectangle(
+    rlc.drawRectangle(
         pos_x - @divTrunc(width, 2),
         pos_y - @divTrunc(height, 2),
         width,
@@ -124,7 +99,7 @@ pub const Button = struct {
     label: [*c]const u8,
     padding: [4]u8,
     font_size: c_int,
-    color: rl.Color,
+    color: rlc.Color,
     fix_factor: f32,
     shown: bool,
 
@@ -138,14 +113,14 @@ pub const Button = struct {
             .label = label,
             .padding = padding,
             .font_size = 50,
-            .color = rl.Color.light_gray,
+            .color = rlc.Color.light_gray,
             .fix_factor = 1.299,
             .shown = true,
         };
     }
     pub fn get_corners(self: Self) [4]Vec(c_int) {
-        const dim = rl.measureTextEx(
-            rl.getFontDefault(),
+        const dim = rlc.measureTextEx(
+            rlc.getFontDefault(),
             self.label,
             @floatFromInt(self.font_size),
             1,
@@ -176,7 +151,7 @@ pub const Button = struct {
     }
     pub fn hover(self: Self) bool {
         const corners = self.get_corners();
-        const mouse_pos_f32 = rl.getMousePosition();
+        const mouse_pos_f32 = rlc.getMousePosition();
         const mouse_pos = Vec(c_int).init(
             @as(c_int, @intFromFloat(mouse_pos_f32.x)),
             @as(c_int, @intFromFloat(mouse_pos_f32.y)),
@@ -201,7 +176,7 @@ pub const Button = struct {
         if (!self.shown) {
             return false;
         }
-        return rl.isMouseButtonReleased(rl.MouseButton.mouse_button_left) and self.hover();
+        return rlc.isMouseButtonReleased(rlc.MouseButton.mouse_button_left) and self.hover();
     }
     pub fn draw(ptr: *anyopaque) void {
         const self: *Self = @ptrCast(@alignCast(ptr));
@@ -211,10 +186,10 @@ pub const Button = struct {
         const bl = corners[2];
         const br = corners[3];
         drawText(self.label, self.position.x, self.position.y, self.font_size, self.color);
-        rl.drawLine(tl.x, tl.y, tr.x, tr.y, self.color);
-        rl.drawLine(tr.x, tr.y, br.x, br.y, self.color);
-        rl.drawLine(br.x, br.y, bl.x, bl.y, self.color);
-        rl.drawLine(bl.x, bl.y, tl.x, tl.y, self.color);
+        rlc.drawLine(tl.x, tl.y, tr.x, tr.y, self.color);
+        rlc.drawLine(tr.x, tr.y, br.x, br.y, self.color);
+        rlc.drawLine(br.x, br.y, bl.x, bl.y, self.color);
+        rlc.drawLine(bl.x, bl.y, tl.x, tl.y, self.color);
     }
     pub fn is_shown(ptr: *anyopaque) *bool {
         const self: *Self = @ptrCast(@alignCast(ptr));
@@ -231,7 +206,7 @@ pub const Text = struct {
     position: Vec(usize),
     font_size: c_int,
     draw_mode: DrawMode,
-    color: rl.Color,
+    color: rlc.Color,
     shown: bool,
 
     pub fn init(
@@ -243,7 +218,7 @@ pub const Text = struct {
             .position = position,
             .font_size = 50,
             .draw_mode = DrawMode.Center,
-            .color = rl.Color.light_gray,
+            .color = rlc.Color.light_gray,
             .shown = true,
         };
     }
@@ -254,7 +229,7 @@ pub const Text = struct {
                 drawText(self.label, self.position.x, self.position.y, self.font_size, self.color);
             },
             .TopLeft => {
-                rl.drawText(
+                rlc.drawText(
                     self.label,
                     @intCast(self.position.x),
                     @intCast(self.position.y),
@@ -270,5 +245,43 @@ pub const Text = struct {
     }
     pub fn drawable(self: *Self) Drawable {
         return .{ .ptr = self, .drawFn = draw, .shownFn = is_shown };
+    }
+};
+
+pub const Sprite = struct {
+    const Self = @This();
+    texture: rlc.Texture,
+    frame_rect: rlc.Rectangle,
+    position: rlc.Vector2,
+    current_frame: u8,
+    total_frames: u8,
+
+    pub fn init(sprite_path: [*:0]const u8, position: rlc.Vector2, sprite_sections: u8) Self {
+        const texture = rlc.Texture.init(sprite_path);
+        return .{
+            .texture = texture,
+            .frame_rect = rlc.Rectangle.init(
+                0,
+                0,
+                @as(f32, @floatFromInt(@divFloor(texture.width, sprite_sections))),
+                @as(f32, @floatFromInt(texture.height)),
+            ),
+            .position = position,
+            .current_frame = 0,
+            .total_frames = sprite_sections,
+        };
+    }
+    pub fn next_frame(self: *Self) void {
+        self.set_frame(self.current_frame + 1);
+    }
+    pub fn set_frame(self: *Self, frame: u8) void {
+        self.current_frame = frame % self.total_frames;
+        self.frame_rect.x = @as(f32, @floatFromInt(self.current_frame)) * self.frame_rect.width;
+    }
+    pub fn deinit(self: Self) void {
+        rlc.unloadTexture(self.texture);
+    }
+    pub fn draw(self: Self) void {
+        self.texture.drawRec(self.frame_rect, self.position, rlc.Color.white);
     }
 };

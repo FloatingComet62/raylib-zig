@@ -1,6 +1,6 @@
 const std = @import("std");
 const rl = @import("raylib.zig");
-const rlc = rl.rl;
+const rlc = rl.rlc;
 const scenes = @import("scenes.zig");
 
 const WIDTH: usize = 1280;
@@ -15,10 +15,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator: std.mem.Allocator = gpa.allocator();
-
-    // var arena = std.heap.ArenaAllocator.init(allocator);
-    // defer arena.deinit();
-    // const arena_allocator = arena.allocator();
 
     try stdout.print("{}\n", .{prng.random().float(f64)});
 
@@ -36,8 +32,8 @@ pub fn main() !void {
     var scene_managers = std.ArrayList(scenes.Scene).init(allocator);
     defer scene_managers.deinit();
 
-    var scene1 = try scenes.Scene1.init(allocator, data);
-    scene1.deinit();
+    var scene1 = scenes.Scene1.init(data);
+    defer scene1.deinit();
 
     try scene_managers.append(scene1.scene());
 
@@ -60,7 +56,7 @@ pub fn main() !void {
         }
         try data.put("make_mouse_pointer", @floatFromInt(@intFromPtr(&make_mouse_pointer)));
         try data.put("active_scene", @floatFromInt(@intFromPtr(&active_scene)));
-        try data.put("frame", @as(f64, @floatFromInt(frame)));
+        try data.put("frame", @floatFromInt(frame));
 
         var scene = scene_managers.items[active_scene];
         scene.update(data);
