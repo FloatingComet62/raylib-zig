@@ -1,6 +1,23 @@
 const std = @import("std");
 pub const rlc = @import("raylib");
 
+fn abs(x: f32) f32 {
+    if (x < 0) {
+        return -x;
+    }
+    return x;
+}
+
+fn sign(x: f32) f32 {
+    if (x == 0) {
+        return 0;
+    }
+    if (x < 0) {
+        return -1;
+    }
+    return 1;
+}
+
 pub const Deiniter = struct {
     const Self = @This();
     ptr: *anyopaque,
@@ -248,40 +265,107 @@ pub const Text = struct {
     }
 };
 
-pub const Sprite = struct {
+pub const TextureData = struct {
+    const Self = @This();
+    path: [*:0]const u8,
+    sections: c_int,
+
+    pub fn init(path: [*:0]const u8, sections: c_int) Self {
+        return .{ .path = path, .sections = sections };
+    }
+};
+
+const TextureRenderingData = struct {
     const Self = @This();
     texture: rlc.Texture,
+    sections: c_int,
+
+    fn init(texture: rlc.Texture, sections: c_int) Self {
+        return .{ .texture = texture, .sections = sections };
+    }
+};
+
+pub const Sprite = struct {
+    const Self = @This();
+    textures: std.ArrayList(TextureRenderingData),
     frame_rect: rlc.Rectangle,
     position: rlc.Vector2,
+    current_texture: usize,
     current_frame: u8,
-    total_frames: u8,
 
-    pub fn init(sprite_path: [*:0]const u8, position: rlc.Vector2, sprite_sections: u8) Self {
-        const texture = rlc.Texture.init(sprite_path);
+    pub fn init(
+        allocator: std.mem.Allocator,
+        sprites_data: []TextureData,
+        position: rlc.Vector2,
+    ) !Self {
+        var textures = try std.ArrayList(TextureRenderingData).initCapacity(
+            allocator,
+            sprites_data.len,
+        );
+        for (sprites_data) |sprite_data| {
+            textures.appendAssumeCapacity(TextureRenderingData.init(
+                rlc.Texture.init(sprite_data.path),
+                sprite_data.sections,
+            ));
+        }
         return .{
-            .texture = texture,
+            .textures = textures,
             .frame_rect = rlc.Rectangle.init(
                 0,
                 0,
-                @as(f32, @floatFromInt(@divFloor(texture.width, sprite_sections))),
-                @as(f32, @floatFromInt(texture.height)),
+                @as(f32, @floatFromInt(@divFloor(
+                    textures.items[0].texture.width,
+                    textures.items[0].sections,
+                ))),
+                @as(f32, @floatFromInt(textures.items[0].texture.height)),
             ),
             .position = position,
+            .current_texture = 0,
             .current_frame = 0,
-            .total_frames = sprite_sections,
         };
     }
     pub fn next_frame(self: *Self) void {
         self.set_frame(self.current_frame + 1);
     }
+    pub fn set_texture(self: *Self, texture_index: usize) void {
+        self.current_texture = texture_index;
+        self.frame_rect = rlc.Rectangle.init(
+            0,
+            0,
+            sign(self.frame_rect.width) * @as(f32, @floatFromInt(@divFloor(
+                self.textures.items[texture_index].texture.width,
+                self.textures.items[texture_index].sections,
+            ))),
+            @as(f32, @floatFromInt(self.textures.items[texture_index].texture.height)),
+        );
+        self.set_frame(self.current_frame);
+    }
     pub fn set_frame(self: *Self, frame: u8) void {
-        self.current_frame = frame % self.total_frames;
+        self.current_frame = frame % @as(
+            u8,
+            @intCast(self.textures.items[self.current_texture].sections),
+        );
         self.frame_rect.x = @as(f32, @floatFromInt(self.current_frame)) * self.frame_rect.width;
     }
     pub fn deinit(self: Self) void {
-        rlc.unloadTexture(self.texture);
+        for (self.textures.items) |texture| {
+            rlc.unloadTexture(texture.texture);
+        }
+        self.textures.deinit();
     }
-    pub fn draw(self: Self) void {
-        self.texture.drawRec(self.frame_rect, self.position, rlc.Color.white);
+    pub fn draw(self: *Self, scale: usize) void {
+        rlc.drawTexturePro(
+            self.textures.items[self.current_texture].texture,
+            self.frame_rect,
+            rlc.Rectangle.init(
+                self.position.x,
+                self.position.y,
+                abs(self.frame_rect.width * @as(f32, @floatFromInt(scale))),
+                abs(self.frame_rect.height * @as(f32, @floatFromInt(scale))),
+            ),
+            rlc.Vector2.init(0.0, 0.0),
+            0.0,
+            rlc.Color.white,
+        );
     }
 };

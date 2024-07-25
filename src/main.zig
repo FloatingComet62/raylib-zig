@@ -32,7 +32,7 @@ pub fn main() !void {
     var scene_managers = std.ArrayList(scenes.Scene).init(allocator);
     defer scene_managers.deinit();
 
-    var scene1 = scenes.Scene1.init(data);
+    var scene1 = try scenes.Scene1.init(allocator, data);
     defer scene1.deinit();
 
     try scene_managers.append(scene1.scene());
